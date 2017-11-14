@@ -9,10 +9,11 @@ total_x = 2; %[m] Height of heater
 x_step = total_x/n_segments;
 x_profile = linspace(0,total_x,n_segments);
 d2T_dx2 = ones(n_segments,1);
-D_hydraulic = 6.6e-3;
+%D_hydraulic = 6.6e-3; %[m]
+D_hydraulic = 2.725e-2;
 r_inner = 0.0381; %[m]
 r_outer = 0.04; %[m]
-r_insulation_outer = 0.04; %[m]
+r_insulation_thickness = 0.05; %[m]
 A_ring = pi*(r_outer^2 - r_inner^2);%Area for the ring section for conductive heat transfer 
 volume_heater = A_ring*x_step;
 A_HS = 2*pi*r_inner*x_step; %[m^2] Surface area of contact of Heater and fluid
@@ -21,15 +22,15 @@ density_steel = 8030; % treated as constnat [kg/m3]
 
 %Inner perforated steel and twisted metal contributes to thermal inertia
 inner_assembly_mass = 3.120/n_segments ;%[kg]
-vol_fluid = pi*(r_inner^2) - (inner_assembly_mass/7700); %m3 Difference between inner cylinder vol and the vol of the inner steel assembly
+vol_fluid = pi*(r_inner^2)*x_step - (inner_assembly_mass/density_steel); %m3 Difference between inner cylinder vol and the vol of the inner steel assembly
 
 
 %input fluid flow
-mass_flow_fluid = 0.018; %[kg/s]
+mass_flow_fluid = 0.18; %[kg/s]
 
 %Time step
-time_end = 5000; %s
-t_segments = time_end; %num of time segments
+time_end = 150; %s
+t_segments = time_end*100; %num of time segments
 t_step = time_end/t_segments; %s
 num_of_snaps = 5; %This variable will tell the program how many snapshots will be taken
 t_store_index = 0; %This variable will increase every time a snapshot is taken at 
@@ -37,7 +38,7 @@ t_profile = linspace(0,time_end,t_segments);
 run_to_end = 0;
 
 %input initial temperature profile in both portions
-initial_homogeneous_temp_heater_side = 273+250; %[K]
+initial_homogeneous_temp_heater_side = 273+80; %[K]
 initial_homogeneous_temp_fluid_side = 273+80; %[K]
 T_heater_initial = ones(n_segments,1).*initial_homogeneous_temp_heater_side;
 T_fluid_initial = ones(n_segments,1).*initial_homogeneous_temp_fluid_side;
@@ -52,8 +53,8 @@ p_profile = ones(n_segments,1).*p_total/n_segments;
 %input inlet temperature of fluid. Assume that this is a constant
 T_inlet = 273+80; %[K] 
 
-%calculate steady state values
-T_steady = lsqnonlin(@(T) dT_dt(T,T_inlet,p_profile,D_hydraulic,r_inner,x_step,volume_heater,density_steel, A_HS,vol_fluid, inner_assembly_mass,mass_flow_fluid,n_segments),T);
+%calculate steady state values. 
+%T_steady = lsqnonlin(@(T) dT_dt(T,T_inlet,p_profile,D_hydraulic,r_inner,x_step,volume_heater,density_steel, A_HS,vol_fluid, inner_assembly_mass,mass_flow_fluid,n_segments),T);
 
 for t = 1:t_segments
     
@@ -73,8 +74,8 @@ for t = 1:t_segments
     
     %Check if steady state is reached. 
     if run_to_end == 0
-        if all((T_steady - T)./T_steady < 0.001)
-        time_to_steady = t;
+        if all((abs(T_steady - T))./T_steady < 0.001)
+        time_to_steady = t*t_step;
         prompt = sprintf('Steady state has been reached at %.1f seconds. Do you want to stop the simulation? Y/N ',time_to_steady);
         str = input(prompt,'s');
             if isempty(str)
@@ -90,11 +91,19 @@ for t = 1:t_segments
  
 end
 
+%plot(x_profile,T(:,1),x_profile,T(:,2))
+
+%figure
 hold on
 for i = 1:t_store_index
-plot(x_profile, T_store{i}(:,2))
+plot(x_profile, T_store{i}(:,1))
 end
 
+%figure 
+hold on
+for j = 1:t_store_index
+%plot(x_profile, T_store{j}(:,2))
+end
 
 
 

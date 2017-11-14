@@ -23,12 +23,20 @@ velocity = @(mass_flow_fluid,density,D_hydraulic) (mass_flow_fluid./density)/(pi
 
 %% Using central difference method to calculate d2T/dt2 and central point method requires i-2 and i+2 values. 
 d2T_dx2 = ones(n_segments,1);
- d2T_data = [ones(2,1).*T_heater(1); T_heater ;ones(2,1).*T_heater(end)];
-    for i = 3:n_segments+2
-        
-        d2T_dx2(i-2) = (-d2T_data(i+2) + 16*d2T_data(i+1)-30*d2T_data(i)+16*d2T_data(i-1)-d2T_data(i-2))/(12*(x_step^2));
-    end
 
+
+% d2T_data = [ones(2,1).*T_heater(1); T_heater ;ones(2,1).*T_heater(end)];
+ %   for i = 3:n_segments+2
+  %      
+    %    d2T_dx2(i-2) = (-d2T_data(i+2) + 16*d2T_data(i+1)-30*d2T_data(i)+16*d2T_data(i-1)-d2T_data(i-2))/(12*(x_step^2));
+   % end
+
+    %try the other method to see if theres a difference
+    d2T_data = [T_heater(1);T_heater;T_heater(end)];
+    for i = 2:n_segments+1;
+    d2T_dx2 (i-1) = (d2T_data(i+1)-d2T_data(i-1))/(x_step^2);
+    end
+    
 %% Dimensionless number definitions
 Re = @(density, viscosity, velocity, length) density.*velocity.*length./viscosity;
 Pr = @(heat_capacity, viscosity, thermal_conductivity) heat_capacity.*viscosity./thermal_conductivity;
@@ -41,7 +49,7 @@ h_calc = h(Nu_calc,k_oil(T_fluid),D_hydraulic);
 
 %% Calculate output
 
-dT_dt_heater = (1./(density_steel.*volume_heater.*c_p_steel(T_heater))).*((volume_heater.*k_steel(T_heater).*d2T_dx2) + p_profile - h_calc.*A_HS.*(T_heater - T_fluid));
+dT_dt_heater = (1./(density_steel.*volume_heater.*c_p_steel(T_heater))).*((-volume_heater.*k_steel(T_heater).*d2T_dx2) + p_profile - h_calc.*A_HS.*(T_heater - T_fluid));
 T_fluid_calc = [T_inlet; T_fluid(1:end-1)]; %This line is to calculate the thermal changes due to mass flow into CV
 heat_cap_fluid =  vol_fluid.*density_oil(T_fluid).*c_p_oil(T_fluid) + inner_assembly_mass*(c_p_steel(T_fluid));
 dT_dt_fluid = (1./heat_cap_fluid).*((mass_flow_fluid.*c_p_oil(T_fluid).*(T_fluid_calc-T_fluid)) + h_calc.*A_HS.*(T_heater - T_fluid));
